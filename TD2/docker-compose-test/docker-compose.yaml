@@ -1,0 +1,14 @@
+services:
+  nginx:
+    image: nginx
+    ports:
+      - "8080:80"
+    volumes:
+      - /home/alex/docker-compose-test/:/usr/share/nginx/html/
+  httpd:
+    image: httpd
+    ports:
+      - "8081:80"
+    volumes:
+      - /home/alex/docker-compose-test/:/var/www/html/
+

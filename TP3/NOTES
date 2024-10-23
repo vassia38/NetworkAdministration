@@ -1,0 +1,15 @@
+
+# for Ex2, deploy 2 containers for ssi.edu and gil.edu
+# lxc-create --name ssi_host --template download -- --dist ubuntu --release jammy --arch amd64
+# lxc-create --name gil_host --template download -- --dist ubuntu --release jammy --arch amd64
+
+# to share files between Host and the containers, first add +777 permission to the meant folder
+# then, from within each container create a /share dir
+# in the config files (normally /var/lib/lxc/container_name/config) of the containers append this line (without '#' and modify the source path):
+# lxc.mount.entry = /home/alex/Reseau/TP3 share none ro,bind 0.0
+
+# from within a container, go to /share and run ./nginx_deploy.sh ( by default it will configure the installation with all modules)
+# this script will install required libs, download versino 1.24 of nginx and unzip, configure, run 'make && make install"
+# then copies .conf, .service, index.html's to their corresponding locations
+
+# prefix for files is set to /usr ( /usr/html/....)
