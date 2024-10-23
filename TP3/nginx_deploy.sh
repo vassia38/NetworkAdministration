@@ -28,7 +28,6 @@ make install
 
 cp $cwd/nginx.conf /etc/nginx/
 cp $cwd/nginx.service /etc/systemd/system/
-cp $cwd/index_ssi.html /usr/html/
-cp $cwd/index_gil.html /usr/html/
+cp -r $cwd/html/ /usr/
 
 sudo systemctl start nginx.service
