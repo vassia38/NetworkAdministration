@@ -1,12 +1,30 @@
 
-# for Ex2, deploy 2 containers for ssi.edu and gil.edu
-# lxc-create --name ssi_host --template download -- --dist ubuntu --release jammy --arch amd64
-# lxc-create --name gil_host --template download -- --dist ubuntu --release jammy --arch amd64
+#### CREATE-ATTACH-STOP CONTAINERS ####
+lxc-create --name ssi_host --template download -- --dist ubuntu --release jammy --arch amd64
+lxc-create --name gil_host --template download -- --dist ubuntu --release jammy --arch amd64
+# or [...] --dist alpine --release 3.17 --arch amd64
+lxc-ls -f
+lxc-start -n $container_name
+lxc-attach -n $container_name
+# or create and launch,
+lxc launch ubuntu:22.04 myContainer
+lxc-stop -n $container_name
 
+#### CONTAINERS ####
+lxc-network show
+lxc-network create
+lxc network $device set ipv4.adress=''
+
+
+#### lxc paths and files ####
+# /var/lib/lxc/$container_name/config
+
+
+#### SHARE FILES FROM HOST TO CONTAINER ####
 # to share files between Host and the containers, first add +777 permission to the meant folder
 # then, from within each container create a /share dir
 # in the config files (normally /var/lib/lxc/container_name/config) of the containers append this line (without '#' and modify the source path):
-# lxc.mount.entry = /home/alex/Reseau/TP3 share none ro,bind 0.0
+lxc.mount.entry = /home/alex/Reseau/TP3 share none ro,bind 0.0
 
 # from within a container, go to /share and run ./nginx_deploy.sh ( by default it will configure the installation with all modules)
 # this script will install required libs, download versino 1.24 of nginx and unzip, configure, run 'make && make install"
