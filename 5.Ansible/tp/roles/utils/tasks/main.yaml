@@ -1,0 +1,10 @@
+- name: install dependencies
+  apk:
+    name: "{{ item }}"
+    state: present
+    update_cache: yes
+  with_items:
+    - openssh
+    - bash
+    - vim
+    - curl

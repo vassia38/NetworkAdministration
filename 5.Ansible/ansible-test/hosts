@@ -1,0 +1,14 @@
+[all]
+localhost
+ub1 ansible_host=10.0.3.11
+ub2 ansible_host=10.0.3.12
+al1 ansible_host=10.0.3.21
+al2 ansible_host=10.0.3.22 ansible_port=444 ansible_user=root ansible_password=passwd
+www ansible_host=www.ssi.edu
+
+
+[ubuntu]
+ub[1:2]
+
+[alpine]
+al[1:2]

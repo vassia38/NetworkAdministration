@@ -1,0 +1,28 @@
+- name: Copy php, composer, and Laravel installer script
+  copy:
+    src: files/install_laravel.sh
+    dest: /tmp/install_laravel.sh
+    mode: '0755'
+
+- name: Run installer
+  shell: |
+    export HOME=/root
+    /tmp/install_laravel.sh
+  environment:
+    HOME: "/root"
+
+- name: Ensure PATH is updated in /etc/profile
+  lineinfile:
+    path: /etc/profile
+    line: 'export PATH="/root/.config/herd-lite/bin:$PATH"'
+    create: yes
+    state: present
+    validate: 'bash -n %s'
+    
+- name: Verify installation
+  shell: |
+    source /etc/profile
+    which composer
+  register: composer_check
+  failed_when: composer_check.rc != 0
+  

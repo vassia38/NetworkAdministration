@@ -1,0 +1,22 @@
+---
+- name: Create LXD virtual machines
+  connection: local
+  hosts: localhost
+  tasks:
+    - name: Create LXD containers
+      community.general.lxd_container:
+        name: "{{ item }}"
+        ignore_volatile_options: true
+        state: started
+        type: "virtual-machine"
+        source:
+          type: image
+          mode: pull
+          server: https://cloud-images.ubuntu.com/releases/
+          protocol: simplestreams
+          alias: "24.04"
+        profiles: ["default"]
+        wait_for_ipv4_addresses: true
+        timeout: 600
+      loop:
+        "{{ groups['workers'] + groups['managers'] }}"

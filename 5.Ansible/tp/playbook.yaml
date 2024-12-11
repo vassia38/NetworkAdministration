@@ -1,0 +1,13 @@
+---
+- name: Deploy the Laravel app
+  hosts: all
+  vars:
+    M2_SSI: SSI
+    SNAME: ServerTP5
+  remote_user: root
+  roles:
+    - utils
+    - php
+    - laravel
+    - mysql
+    - nginx

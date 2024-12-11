@@ -1,0 +1,4 @@
+mysql_root_password: "passwd"
+mysql_database: "ssi_db"
+mysql_user: "ssi_user"
+mysql_user_password: "passwd"
