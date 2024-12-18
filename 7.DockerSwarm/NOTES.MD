@@ -1,6 +1,7 @@
 https://ubuntu.com/tutorials/how-to-run-docker-inside-lxd-containers#4-test-your-docker-container
 running docker inside lxc containers needs special settings
 
+https://stackoverflow.com/questions/51930407/docker-compose-error-cannot-restrict-inter-container-communication
 https://stackoverflow.com/questions/60894640/no-networking-from-host-to-docker-container
 config of loaded kernel modules is very important
 
