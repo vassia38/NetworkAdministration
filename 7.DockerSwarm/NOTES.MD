@@ -11,3 +11,10 @@ when having more than 1 network interfaces on each node, it is crucial to explic
 
 https://stackoverflow.com/questions/76768718/how-to-resize-an-ubuntu-lxc-lxd-container
 have enough lxc storage and volume space
+
+leader:
+$ docker swarm init --advertise-addr eth0 --listen-addr eth0
+
+manager/worker:
+$ docker swarm join --token <TOKEN> <LEADER_IP> --advertise-addr eth0 --listen-addr eth0
+
