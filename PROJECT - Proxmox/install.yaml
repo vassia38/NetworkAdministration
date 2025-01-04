@@ -1,0 +1,240 @@
+---
+- name: Install and Configure Proxmox VE
+  hosts: proxmox1   # Le groupe ou hôte sur lequel exécuter les tâches
+  become: true       # Exécute les tâches avec des privilèges root
+  gather_facts: yes
+  vars:
+    domainname: ssi.edu
+    dhcp_interface: "vmbr0"
+    proxmox_interfaces1: |
+      source /etc/network/interfaces.d/*
+
+      auto lo
+      iface lo inet loopback
+
+
+      auto enp0s3
+      iface enp0s3 inet static
+              address {{ hostvars[inventory_hostname]['ansible_host'] }}
+              netmask {{ ansible_default_ipv4.netmask }}
+              gateway {{ ansible_default_ipv4.gateway }}
+              dns-nameservers 8.8.8.8, 8.8.4.4
+
+      iface enp0s8 inet manual
+
+    proxmox_interfaces2: |
+      source /etc/network/interfaces.d/*
+
+      auto lo
+      iface lo inet loopback
+
+
+      auto enp0s3
+      iface enp0s3 inet static
+              address {{ hostvars[inventory_hostname]['ansible_host'] }}
+              netmask {{ ansible_default_ipv4.netmask }}
+              gateway {{ ansible_default_ipv4.gateway }}
+              dns-nameservers 8.8.8.8, 8.8.4.4
+
+      iface enp0s8 inet manual
+
+      auto vmbr0
+      iface vmbr0 inet static
+              address 192.168.3.1/24
+              bridge-ports enp0s8
+              bridge-stp off
+              bridge-fd 0
+  tasks:
+    - name: Remove packages
+      ansible.builtin.package:
+        name:
+          - os-prober
+        state: absent
+
+    - name: Install packages
+      ansible.builtin.package:
+        name:
+          - gpg
+        state: present
+
+    - name: Clean /etc/hosts
+      ansible.builtin.lineinfile:
+        path: /etc/hosts
+        regexp: "^127.0.1.1.*"
+        owner: root
+        group: root
+        mode: "0644"
+        state: absent
+
+    - name: Add host in /etc/hosts
+      ansible.builtin.lineinfile:
+        path: /etc/hosts
+        regexp: "^{{ ansible_all_ipv4_addresses[0] }}"
+        owner: root
+        group: root
+        mode: "0644"
+        state: present
+        line: "{{ ansible_all_ipv4_addresses[0] }} {{ ansible_hostname }}.{{ domainname }} {{ ansible_hostname }}"
+
+    - name: Set IPV4
+      ansible.posix.sysctl:
+        sysctl_file: /etc/sysctl.d/proxmox.conf
+        name: "{{ item.name }}"
+        value: "{{ item.value }}"
+        state: present
+      loop:
+        - {name: net.ipv4.conf.all.rp_filter, value: 1 }
+        - {name: net.ipv4.icmp_echo_ignore_broadcasts, value: 1 }
+        - {name: net.ipv4.ip_forward, value: 1 }
+
+    - name: Add Proxmox GPG key
+      ansible.builtin.get_url:
+        url: "https://enterprise.proxmox.com/debian/proxmox-release-{{ ansible_distribution_release }}.gpg"
+        dest: "/etc/apt/trusted.gpg.d/proxmox-release-{{ ansible_distribution_release }}.gpg"
+        owner: root
+        group: root
+        mode: "0644"
+
+    - name: Add Proxmox repository and update cache
+      ansible.builtin.apt_repository:
+        repo: "deb [arch=amd64] http://download.proxmox.com/debian/pve {{ ansible_distribution_release }} pve-no-subscription"
+        state: present
+        update_cache: true
+
+    - name: Remove enterprise repo
+      ansible.builtin.file:
+        path: /etc/apt/sources.list.d/pve-enterprise.list
+        state: absent
+
+    - name: Fix broken dependencies
+      ansible.builtin.command:
+        cmd: apt --fix-broken install -y
+
+    - name: Install missing Proxmox dependencies
+      ansible.builtin.apt:
+        name:
+          - pve-firmware
+          - proxmox-kernel-6.8.12-5-pve
+        state: present
+        update_cache: yes
+
+
+    - name: Perform full upgrade
+      ansible.builtin.apt:
+        upgrade: dist
+        update_cache: yes
+  
+
+    - name: Install Proxmox and tools
+      ansible.builtin.package:
+        name:
+          - proxmox-ve
+          - ksm-control-daemon
+          - locales-all
+          - chrony
+          - libguestfs-tools
+        state: present
+
+    - name: Remove kernel
+      ansible.builtin.package:
+        name: "linux-image-6.1*"
+        state: absent
+
+    - name: Installer le package bridge-utils
+      apt:
+        name: bridge-utils
+        state: present
+
+    - name: Configure network interfaces1
+      ansible.builtin.copy:
+        dest: /etc/network/interfaces
+        content: "{{ proxmox_interfaces1 }}"
+        owner: root
+        group: root
+        mode: "0644"
+
+    - name: Reload networking1
+      ansible.builtin.command:
+        cmd: ifreload -a
+
+    - name: Configure network interfaces2
+      ansible.builtin.copy:
+        dest: /etc/network/interfaces
+        content: "{{ proxmox_interfaces2 }}"
+        owner: root
+        group: root
+        mode: "0644"
+
+    - name: Reload networking2
+      ansible.builtin.command:
+        cmd: ifreload -a
+
+    - name: Wait for Proxmox to come back online
+      ansible.builtin.wait_for:
+        port: 22
+        host: '{{ ansible_host }}'
+        timeout: 60
+
+
+    - name: Restart Proxmox proxy service
+      ansible.builtin.service:
+        name: pveproxy
+        state: restarted
+
+    - name: Installer le paquet ISC DHCP Server
+      ansible.builtin.apt:
+        name: isc-dhcp-server
+        state: present
+        update_cache: yes
+
+    - name: Configurer l'interface DHCP
+      ansible.builtin.lineinfile:
+        path: /etc/default/isc-dhcp-server
+        regexp: '^INTERFACESv4=.*'
+        line: 'INTERFACESv4="{{ dhcp_interface }}"'
+        state: present
+
+    - name: Configurer le fichier dhcpd.conf
+      ansible.builtin.template:
+        src: templates/dhcpd.conf.j2
+        dest: /etc/dhcp/dhcpd.conf
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Redémarrer le service DHCP
+      ansible.builtin.systemd:
+        name: isc-dhcp-server
+        state: restarted
+        enabled: true
+
+    - name: Activer le routage IP dans sysctl
+      ansible.builtin.lineinfile:
+        path: /etc/sysctl.conf
+        regexp: '^net.ipv4.ip_forward'
+        line: 'net.ipv4.ip_forward=1'
+        state: present
+
+    - name: Appliquer la configuration sysctl
+      ansible.builtin.command:
+        cmd: sysctl -p
+      args:
+        warn: false
+
+    - name: Ajouter une règle iptables pour le NAT
+      ansible.builtin.command:
+        cmd: iptables -t nat -A POSTROUTING -o enp0s3 -s 192.168.3.0/24 -j MASQUERADE
+
+    - name: Créer le répertoire pour les règles iptables
+      ansible.builtin.file:
+        path: /etc/iptables
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+
+    - name: Enregistrer les règles iptables (optionnel, selon le système)
+      ansible.builtin.shell:
+        cmd: iptables-save > /etc/iptables/rules.v4
+      when: ansible_distribution in ['Debian', 'Ubuntu']
+...
