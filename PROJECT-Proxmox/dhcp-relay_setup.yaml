@@ -1,0 +1,39 @@
+---
+- name: configure DHCP relay on proxmox node
+  hosts: proxmox2
+  become: false
+  vars:
+    dhcp_relay_interfaces:    # Interfaces on proxmox node
+      - vmbr0
+      - ens33
+    dhcp_relay_options: ""    # Enable detailed logging for debugging
+  tasks:
+    - name: Retrieve Proxmox1 IP (aka the DHCP server) address from inventory
+      set_fact:
+        dhcp_server_ip: "{{ hostvars['proxmox1']['ansible_host'] }}"
+
+    - name: Install ISC DHCP relay
+      ansible.builtin.package:
+        name: isc-dhcp-relay
+        state: present
+
+    - name: Configure ISC DHCP relay
+      ansible.builtin.template:
+        src: dhcp-relay.conf.j2
+        dest: /etc/default/isc-dhcp-relay
+        owner: root
+        group: root
+        mode: "0644"
+
+    - name: Restart DHCP relay service
+      ansible.builtin.systemd:
+        name: isc-dhcp-relay
+        state: restarted
+        enabled: true
+
+    - name: Verify DHCP relay service status
+      ansible.builtin.systemd:
+        name: isc-dhcp-relay
+        state: started
+        enabled: true
+

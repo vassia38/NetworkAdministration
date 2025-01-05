@@ -1,0 +1,34 @@
+---
+- name: Install and Configure Proxmox VE
+  hosts: proxmox1     # Le groupe ou hôte sur lequel exécuter les tâches
+  become: false       # Exécute les tâches avec des privilèges root
+  gather_facts: yes 
+  vars:
+    dhcp_interface: "vmbr0"
+  tasks:
+    - name: Installer le paquet ISC DHCP Server
+      ansible.builtin.apt:
+        name: isc-dhcp-server
+        state: present
+        update_cache: yes 
+
+    - name: Configurer l'interface DHCP
+      ansible.builtin.lineinfile:
+        path: /etc/default/isc-dhcp-server
+        regexp: '^INTERFACESv4=.*'
+        line: 'INTERFACESv4="{{ dhcp_interface }}"'
+        state: present
+
+    - name: Configurer le fichier dhcpd.conf
+      ansible.builtin.template:
+        src: templates/dhcpd.conf.j2
+        dest: /etc/dhcp/dhcpd.conf
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Redémarrer le service DHCP
+      ansible.builtin.systemd:
+        name: isc-dhcp-server
+        state: restarted
+        enabled: true

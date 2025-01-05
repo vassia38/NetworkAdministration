@@ -1,0 +1,42 @@
+---
+- name: Upload ISO files to Proxmox local storage
+  hosts: proxmox2
+  become: false
+  vars:
+    iso_source: ./iso_images
+    iso_destination: /var/lib/vz/template/iso
+  tasks:
+    - name: Ensure ISO destination directory exists
+      ansible.builtin.file:
+        path: "{{ iso_destination }}"
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+
+    - name: Find all ISO files in the source dir
+      delegate_to: localhost
+      ansible.builtin.find:
+        paths: "{{ iso_source }}"
+        patterns: "*.iso"
+        recurse: yes
+      register: found_iso_files
+
+    - name: Upload ISO files
+      ansible.builtin.copy:
+        src: "{{ item.path }}"
+        dest: "{{ iso_destination }}/"
+        owner: root
+        group: root
+        mode: '0644'
+      loop: "{{ found_iso_files.files }}"
+
+    - name: List uploaded ISO files
+      ansible.builtin.command:
+        cmd: ls -l "{{ iso_destination }}"
+      register: iso_list
+
+    - name: Display uploaded ISO files
+      ansible.builtin.debug:
+        msg: "{{ iso_list.stdout_lines }}"
+

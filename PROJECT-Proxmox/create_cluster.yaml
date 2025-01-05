@@ -1,0 +1,19 @@
+---
+- name: Create Proxmox Cluster
+  hosts: proxmox1
+  become: true
+  vars:
+    default_cluster_name: "my-cluster"
+  tasks:
+    - name: Set cluster name
+      ansible.builtin.set_fact:
+        cluster_name: "{{ cluster_name | default(default_cluster_name) }}"
+    - name: Create Proxmox Cluster
+      ansible.builtin.command:
+        cmd: "pvecm create {{ cluster_name }}"
+      register: cluster_output
+
+    - name: Display Cluster Output
+      ansible.builtin.debug:
+        msg: "{{ cluster_output.stdout }}"
+

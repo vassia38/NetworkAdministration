@@ -1,0 +1,51 @@
+---
+- name: Upload ISO files to a shared NFS directory
+  hosts: proxmox1  # The node to interact with the NFS share
+  become: false
+  vars:
+    nfs_mount_point: /mnt/pve/proxmox-nfs   # Shared NFS mount point
+    iso_source_directory: ./iso_images      # Local directory with ISO files
+    nfs_server_ip: "{{ hostvars['nfs']['ansible_host'] }}"
+    nfs_server_srcpath: /srv/proxmox-nfs
+  tasks:
+    - name: Ensure NFS share is mounted
+      ansible.builtin.mount:
+        path: "{{ nfs_mount_point }}"
+        src: " {{ nfs_server_ip }}:{{ nfs_server_srcpath }}"
+        fstype: nfs
+        opts: rw
+        state: mounted
+
+    - name: Find all ISO files in the source directory
+      delegate_to: localhost
+      ansible.builtin.find:
+        paths: "{{ iso_source_directory }}"
+        patterns: "*.iso"
+        recurse: yes
+      register: found_iso_files
+
+    - name: Upload ISO files to the shared NFS directory
+      ansible.builtin.copy:
+        src: "{{ item.path }}"
+        dest: "{{ nfs_mount_point }}/template/iso/"
+        remote_src: false
+        owner: root
+        group: root
+        mode: '0644'
+      with_items: "{{ found_iso_files.files }}"
+    - name: Fix ownership and permissions
+      ansible.builtin.file:
+        path: "{{ nfs_mount_point }}/template/iso/{{ item.path | basename }}"
+        owner: root
+        group: root
+        mode: '0644'
+      with_items: "{{ found_iso_files.files }}"
+    - name: Verify ISO files in the NFS directory
+      ansible.builtin.command:
+        cmd: ls -l "{{ nfs_mount_point }}/template/iso/"
+      register: iso_list
+
+    - name: Display uploaded ISO files
+      ansible.builtin.debug:
+        msg: "{{ iso_list.stdout_lines }}"
+

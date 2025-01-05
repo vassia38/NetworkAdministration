@@ -1,0 +1,47 @@
+---
+- name: Configure NFS Server and Add Storage to Proxmox
+  hosts: nfs
+  become: false
+  tasks:
+    # 1. Installer le serveur NFS
+    - name: Install NFS server
+      apt:
+        name: nfs-kernel-server
+        state: present
+
+    # 2. Créer le répertoire à partager
+    - name: Create NFS share directory
+      file:
+        path: /srv/proxmox-nfs
+        state: directory
+        mode: '0777'
+
+    # 3. Configurer le partage NFS
+    - name: Configure NFS exports
+      lineinfile:
+        path: /etc/exports
+        line: "/srv/proxmox-nfs 192.168.38.0/24(rw,sync,no_root_squash,no_subtree_check) 192.168.3.0/24(rw,sync,no_root_squash,no_subtree_check)"
+        create: yes
+
+    # 4. Redémarrer le service NFS
+    - name: Restart NFS server
+      systemd:
+        name: nfs-kernel-server
+        state: restarted
+
+    # 5. Activer NFS au démarrage
+    - name: Enable NFS server on boot
+      systemd:
+        name: nfs-kernel-server
+        enabled: true
+
+- name: Add NFS Storage to Proxmox
+  hosts: proxmox1
+  become: true
+  tasks:
+    # 6. Ajouter le stockage NFS dans Proxmox
+    - name: Add NFS storage in Proxmox
+      shell: |
+        pvesm add nfs proxmox-nfs --server {{ hostvars['nfs']['ansible_host'] }} --export /srv/proxmox-nfs --content images,backup
+      args:
+        executable: /bin/bash

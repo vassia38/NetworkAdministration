@@ -1,0 +1,22 @@
+---
+- name: Join Proxmox Cluster
+  hosts: proxmox3
+  become: false
+  vars:
+    cluster_ip: "{{ cluster_ip }}"  # Replace with the IP of the cluster's main node
+  tasks:
+    - name: Generate Join Command
+      ansible.builtin.command:
+        cmd: "pvecm add {{ cluster_ip }}"
+      args:
+        warn: false
+      register: join_cmd
+
+    - name: Join Proxmox Cluster
+      ansible.builtin.shell:
+        cmd: "{{ join_cmd.cmd }}"
+      register: join_output
+
+    - name: Display Join Output
+      ansible.builtin.debug:
+        msg: "{{ join_output.stdout }}"
