@@ -1,0 +1,85 @@
+- name: Create a new VM in Proxmox
+  hosts: proxmox1
+  become: true
+  vars_prompt:
+    - name: proxmox_password
+      prompt: "Enter the Proxmox root password"
+      private: yes  # Hides input during the prompt
+  vars:
+    vm_name: "vm-test"
+    vm_cores: 1
+    vm_memory: 1024
+    vm_storage: "proxmox-nfs"
+    vm_disk_size: "4G"
+    iso_dir_path: "/mnt/pve/proxmox-nfs/template/iso/"
+    proxmox_node: "proxmoxvm"
+    network_bridge: "vmbr0"
+
+  tasks:
+    - name: Ensure libguestfs-tools is installed
+      ansible.builtin.package:
+        name: libguestfs-tools
+        state: present
+    
+    #- name: Ensure pip3 is installed
+    #  ansible.builtin.package:
+    #    name: python3-pip
+    #    state: present
+
+    - name: Ensure Py lib 'proxmoxer' is installed
+      ansible.builtin.package:
+        name: python3-proxmoxer
+        state: present
+
+    - name: List available ISO files in Proxmox storage
+      ansible.builtin.find:
+        paths: "{{ iso_dir_path }}"
+        patterns: "*.iso"
+      register: iso_files
+
+    - name: Display available ISO files
+      debug:
+        msg: "Available ISO files: {{ iso_files.files | map(attribute='path') | join(', ') }}"
+
+    - name: Prompt user to select an ISO file
+      pause:
+        prompt: "Enter the name of the ISO file to use (without path):"
+      register: user_input
+
+    - name: Validate selected ISO file and save to variable
+      set_fact:
+        selected_iso: "{{ user_input.user_input }}"
+      when: " '{{ iso_dir_path }}' + user_input.user_input in (iso_files.files | map(attribute='path'))"
+      failed_when: "'{{ iso_dir_path }}' + user_input.user_input not in (iso_files.files | map(attribute='path'))"
+
+    - name: Create a new virtual machine
+      community.general.proxmox_kvm:
+        api_host: "{{ ansible_host }}"
+        api_user: "root@pam"
+        api_password: "{{ proxmox_password }}"
+        node: "{{ proxmox_node }}"
+        name: "{{ vm_name }}"
+        cores: "{{ vm_cores }}"
+        memory: "{{ vm_memory }}"
+        ostype: "l26"
+        scsihw: "virtio-scsi-single"  # Set SCSI controller to VirtIO SCSI single
+        scsi:
+          storage: "proxmox-nfs"       # Use proxmox-nfs for the disk
+          size: "{{ vm_disk_size }}"   # Disk size
+        ide:
+          file: "{{ iso_dir_path }}/{{ selected_iso }}"     # ISO file
+          media: "cdrom"               # Specify CD-ROM for ISO boot
+        net:
+          bridge: "{{ network_bridge }}"  # Bridge to attach
+        state: present
+      register: create_vm_output
+
+    - name: Start the newly created VM
+      community.general.proxmox_kvm:
+        api_host: "{{ ansible_host }}"
+        api_user: "root@pam"
+        api_password: "{{ proxmox_password }}"
+        vmid: "{{ create_vm_output.vmid }}"
+        node: "{{ proxmox_node }}"
+        state: started
+

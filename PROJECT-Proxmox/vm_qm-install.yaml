@@ -1,0 +1,66 @@
+- name: Install a Virtual Machine on Proxmox
+  hosts: proxmox1
+  become: true
+  vars:
+    vm_name:        "vm-test"
+    vm_cores:       1
+    vm_memory:      1024
+    storage_pool:   "proxmox-nfs"
+    vm_disk_size:   "4"
+    iso_dir_path:   "/mnt/pve/proxmox-nfs/template/iso/"
+    proxmox_node:   "proxmoxvm"
+    network_bridge: "vmbr0"
+  
+  tasks:
+    - name: Find the next available VM ID
+      ansible.builtin.command:
+        cmd: "pvesh get /cluster/nextid"
+      register: next_vm_id
+      changed_when: false
+
+    - name: List available ISO files in Proxmox storage
+      ansible.builtin.find:
+        paths: "{{ iso_dir_path }}"
+        patterns: "*.iso"
+      register: iso_files
+
+    - name: Display available ISO files
+      debug:
+        msg: "Available ISO files: {{ iso_files.files | map(attribute='path') | join(', ') }}"
+
+    - name: Prompt user to select an ISO file
+      pause:
+        prompt: "Enter the name of the ISO file to use (without path):"
+      register: user_input
+
+    - name: Debug a variable
+      ansible.builtin.debug:
+        var: user_input
+
+    - name: Validate selected ISO file and save to variable
+      set_fact: 
+        selected_iso: "{{ user_input.user_input }}"
+      when: " '{{ iso_dir_path }}' + user_input.user_input in (iso_files.files | map(attribute='path'))"   
+      failed_when: "'{{ iso_dir_path }}' + user_input.user_input not in (iso_files.files | map(attribute='path'))"
+
+    - name: Create a disk image for the VM
+      ansible.builtin.command:
+        cmd: >
+          qm create {{ next_vm_id.stdout }} --name {{ vm_name }} --memory {{ vm_memory }} --cores {{ vm_cores }} --net0 virtio,bridge={{ network_bridge }} --boot order=scsi0;ide2
+      args:
+        chdir: /root
+
+    - name: Attach the disk to the VM
+      ansible.builtin.command:
+        cmd: >
+          qm set {{ next_vm_id.stdout }} --scsihw virtio-scsi-pci --scsi0 {{ storage_pool }}:{{ vm_disk_size }}
+      args:
+        chdir: /root
+
+    - name: Attach the ISO to the VM
+      ansible.builtin.command:
+        cmd: qm set {{ next_vm_id.stdout }} --cdrom {{ storage_pool }}:iso/{{ user_input.user_input }}
+
+    - name: Start the VM
+      ansible.builtin.command:
+        cmd: qm start {{ next_vm_id.stdout }}
