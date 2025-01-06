@@ -71,6 +71,50 @@
         - {name: net.ipv4.icmp_echo_ignore_broadcasts, value: 1 }
         - {name: net.ipv4.ip_forward, value: 1 }
 
+    - name: Installer le package bridge-utils
+      apt:
+        name: bridge-utils
+        state: present
+
+    - name: Configure network interfaces
+      ansible.builtin.copy:
+        dest: /etc/network/interfaces
+        content: "{{ proxmox_interfaces }}"
+        owner: root
+        group: root
+        mode: "0644"
+
+    - name: Reload networking
+      ansible.builtin.command:
+        cmd: systemctl restart networking
+
+    - name: Wait for Proxmox to come back online
+      ansible.builtin.wait_for:
+        port: 22
+        host: '{{ ansible_host }}'
+        timeout: 60
+
+    - name: Appliquer la configuration sysctl
+      ansible.builtin.command:
+        cmd: /usr/sbin/sysctl -p
+
+    - name: Installer le paquet Iptables-persistent
+      ansible.builtin.apt:
+        name: iptables-persistent
+        state: present
+        update_cache: yes 
+
+    - name: Ajouter une règle iptables pour le NAT 
+      ansible.builtin.command:
+        cmd: iptables -t nat -A POSTROUTING -o ens33 -s 192.168.3.0/24 -j MASQUERADE
+
+    - name: Enregistrer les règles iptables (optionnel, selon le système)
+      ansible.builtin.shell:
+        cmd: iptables-save > /etc/iptables/rules.v4
+      when: ansible_distribution in ['Debian', 'Ubuntu']
+
+
+
     - name: Add Proxmox GPG key
       ansible.builtin.get_url:
         url: "https://enterprise.proxmox.com/debian/proxmox-release-{{ ansible_distribution_release }}.gpg"
@@ -129,25 +173,6 @@
         name: bridge-utils
         state: present
 
-    - name: Configure network interfaces
-      ansible.builtin.copy:
-        dest: /etc/network/interfaces
-        content: "{{ proxmox_interfaces }}"
-        owner: root
-        group: root
-        mode: "0644"
-
-    - name: Reload networking
-      ansible.builtin.command:
-        cmd: ifreload -a
-
-    - name: Wait for Proxmox to come back online
-      ansible.builtin.wait_for:
-        port: 22
-        host: '{{ ansible_host }}'
-        timeout: 60
-
-
     - name: Restart Proxmox proxy service
       ansible.builtin.service:
         name: pveproxy
@@ -164,18 +189,3 @@
       ansible.builtin.command:
         cmd: /usr/sbin/sysctl -p
 
-    - name: Installer le paquet Iptables-persistent
-      ansible.builtin.apt:
-        name: iptables-persistent
-        state: present
-        update_cache: yes
-
-    - name: Ajouter une règle iptables pour le NAT
-      ansible.builtin.command:
-        cmd: iptables -t nat -A POSTROUTING -o ens33 -s 192.168.3.0/24 -j MASQUERADE
-
-    - name: Enregistrer les règles iptables (optionnel, selon le système)
-      ansible.builtin.shell:
-        cmd: iptables-save > /etc/iptables/rules.v4
-      when: ansible_distribution in ['Debian', 'Ubuntu']
-...
