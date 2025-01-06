@@ -1,0 +1,49 @@
+---
+- name: Create a PAM user with no login and assign PVEAdmin role
+  hosts: proxmox3
+  become: true
+  tasks:
+
+    - name: Ensure the system user exists with no login shell
+      ansible.builtin.user:
+        name: "{{ new_user }}"
+        password: "{{ new_user_hashed_password }}"
+        comment: "{{ new_user_comment }}"
+        shell: /usr/sbin/nologin
+      vars:
+        new_user_hashed_password: "{{ new_user_password | password_hash('sha512') }}"
+
+    - name: Add the user to Proxmox PAM realm
+      ansible.builtin.command:
+        cmd: "pveum useradd {{ new_user }}@pam -comment '{{ new_user_comment }}'"
+
+    - name: Validate the user exists in Proxmox
+      ansible.builtin.command:
+        cmd: "pveum user list"
+      register: user_list_result
+      failed_when: "'{{ new_user }}@pam' not in user_list_result.stdout"
+
+    - name: Set the Proxmox user's password
+      ansible.builtin.shell:
+        cmd: "echo '{{ new_user_password }}' | pveum passwd {{ new_user }}@pam"
+      no_log: true
+      register: passwd_result
+      failed_when: "'unable to connect' in passwd_result.stderr"
+
+    - name: Assign PVEAdmin role to the user
+      ansible.builtin.command:
+        cmd: "pveum aclmod / -user {{ new_user }}@pam -role PVEAdmin"
+
+  vars_prompt:
+    - name: "new_user"
+      prompt: "Enter the username for the new PAM user"
+      private: no
+
+    - name: "new_user_comment"
+      prompt: "Enter a comment for the new user (optional)"
+      private: no
+
+    - name: "new_user_password"
+      prompt: "Enter the password for the new user"
+      private: yes
+
