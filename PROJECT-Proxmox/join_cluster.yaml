@@ -8,8 +8,6 @@
     - name: Generate Join Command
       ansible.builtin.command:
         cmd: "pvecm add {{ cluster_ip }}"
-      args:
-        warn: false
       register: join_cmd
 
     - name: Join Proxmox Cluster

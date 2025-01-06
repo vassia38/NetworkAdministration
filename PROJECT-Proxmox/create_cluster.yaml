@@ -1,6 +1,6 @@
 ---
 - name: Create Proxmox Cluster
-  hosts: proxmox1
+  hosts: proxmox3
   become: true
   vars:
     default_cluster_name: "my-cluster"

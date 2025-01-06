@@ -1,47 +1,31 @@
 ---
 - name: Install and Configure Proxmox VE
-  hosts: proxmox1   # Le groupe ou hôte sur lequel exécuter les tâches
+  hosts: proxmox3    # Le groupe ou hôte sur lequel exécuter les tâches
   become: true       # Exécute les tâches avec des privilèges root
   gather_facts: yes
   vars:
     domainname: ssi.edu
     dhcp_interface: "vmbr0"
-    proxmox_interfaces1: |
+    proxmox_interfaces: |
       source /etc/network/interfaces.d/*
 
       auto lo
       iface lo inet loopback
 
 
-      auto enp0s3
-      iface enp0s3 inet static
+      auto ens33
+      iface ens33 inet static
               address {{ hostvars[inventory_hostname]['ansible_host'] }}
               netmask {{ ansible_default_ipv4.netmask }}
               gateway {{ ansible_default_ipv4.gateway }}
               dns-nameservers 8.8.8.8, 8.8.4.4
 
-      iface enp0s8 inet manual
-
-    proxmox_interfaces2: |
-      source /etc/network/interfaces.d/*
-
-      auto lo
-      iface lo inet loopback
-
-
-      auto enp0s3
-      iface enp0s3 inet static
-              address {{ hostvars[inventory_hostname]['ansible_host'] }}
-              netmask {{ ansible_default_ipv4.netmask }}
-              gateway {{ ansible_default_ipv4.gateway }}
-              dns-nameservers 8.8.8.8, 8.8.4.4
-
-      iface enp0s8 inet manual
+      iface ens36 inet manual
 
       auto vmbr0
       iface vmbr0 inet static
               address 192.168.3.1/24
-              bridge-ports enp0s8
+              bridge-ports ens36
               bridge-stp off
               bridge-fd 0
   tasks:
@@ -145,27 +129,15 @@
         name: bridge-utils
         state: present
 
-    - name: Configure network interfaces1
+    - name: Configure network interfaces
       ansible.builtin.copy:
         dest: /etc/network/interfaces
-        content: "{{ proxmox_interfaces1 }}"
+        content: "{{ proxmox_interfaces }}"
         owner: root
         group: root
         mode: "0644"
 
-    - name: Reload networking1
-      ansible.builtin.command:
-        cmd: ifreload -a
-
-    - name: Configure network interfaces2
-      ansible.builtin.copy:
-        dest: /etc/network/interfaces
-        content: "{{ proxmox_interfaces2 }}"
-        owner: root
-        group: root
-        mode: "0644"
-
-    - name: Reload networking2
+    - name: Reload networking
       ansible.builtin.command:
         cmd: ifreload -a
 
@@ -181,33 +153,6 @@
         name: pveproxy
         state: restarted
 
-    - name: Installer le paquet ISC DHCP Server
-      ansible.builtin.apt:
-        name: isc-dhcp-server
-        state: present
-        update_cache: yes
-
-    - name: Configurer l'interface DHCP
-      ansible.builtin.lineinfile:
-        path: /etc/default/isc-dhcp-server
-        regexp: '^INTERFACESv4=.*'
-        line: 'INTERFACESv4="{{ dhcp_interface }}"'
-        state: present
-
-    - name: Configurer le fichier dhcpd.conf
-      ansible.builtin.template:
-        src: templates/dhcpd.conf.j2
-        dest: /etc/dhcp/dhcpd.conf
-        owner: root
-        group: root
-        mode: '0644'
-
-    - name: Redémarrer le service DHCP
-      ansible.builtin.systemd:
-        name: isc-dhcp-server
-        state: restarted
-        enabled: true
-
     - name: Activer le routage IP dans sysctl
       ansible.builtin.lineinfile:
         path: /etc/sysctl.conf
@@ -217,21 +162,17 @@
 
     - name: Appliquer la configuration sysctl
       ansible.builtin.command:
-        cmd: sysctl -p
-      args:
-        warn: false
+        cmd: /usr/sbin/sysctl -p
+
+    - name: Installer le paquet Iptables-persistent
+      ansible.builtin.apt:
+        name: iptables-persistent
+        state: present
+        update_cache: yes
 
     - name: Ajouter une règle iptables pour le NAT
       ansible.builtin.command:
-        cmd: iptables -t nat -A POSTROUTING -o enp0s3 -s 192.168.3.0/24 -j MASQUERADE
-
-    - name: Créer le répertoire pour les règles iptables
-      ansible.builtin.file:
-        path: /etc/iptables
-        state: directory
-        owner: root
-        group: root
-        mode: '0755'
+        cmd: iptables -t nat -A POSTROUTING -o ens33 -s 192.168.3.0/24 -j MASQUERADE
 
     - name: Enregistrer les règles iptables (optionnel, selon le système)
       ansible.builtin.shell:

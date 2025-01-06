@@ -2,15 +2,25 @@ all:
   children:
     bastions:
       hosts:
-        bastion:
-          ansible_host: 10.209.84.247
+        nfs:
+          ansible_host: 192.168.38.149
           ansible_user: root
-          ansible_ssh_private_key_file: /home/louis/.ssh/id_ed25519
+          ansible_ssh_private_key_file: ./ssh/id_ed25519
           ansible_python_interpreter: /usr/bin/python3
     proxmoxs:
       hosts:
         proxmox1:
-          ansible_host: 192.168.1.64
+          ansible_host: 192.168.38.146
           ansible_user: root
-          ansible_ssh_private_key_file: /home/louis/.ssh/id_ed25519
+          ansible_ssh_private_key_file: ./ssh/id_ed25519
+          ansible_python_interpreter: /usr/bin/python3
+        proxmox2:
+          ansible_host: 192.168.38.148
+          ansible_user: root
+          ansible_ssh_private_key_file: ./ssh/id_ed25519
+          ansible_python_interpreter: /usr/bin/python3
+        proxmox3:
+          ansible_host: 192.168.38.150
+          ansible_user: root
+          ansible_ssh_private_key_file: ./ssh/id_ed25519
           ansible_python_interpreter: /usr/bin/python3
