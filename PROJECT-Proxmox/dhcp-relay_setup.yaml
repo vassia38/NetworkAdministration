@@ -1,6 +1,6 @@
 ---
 - name: configure DHCP relay on proxmox node
-  hosts: proxmox2
+  hosts: proxmox3
   become: false
   vars:
     dhcp_relay_interfaces:    # Interfaces on proxmox node

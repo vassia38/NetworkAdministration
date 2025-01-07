@@ -1,0 +1,11 @@
+---
+- name: Add NFS Storage to Proxmox
+  hosts: proxmox3
+  become: true
+  tasks:
+    # 6. Ajouter le stockage NFS dans Proxmox
+    - name: Add NFS storage in Proxmox
+      shell: |
+        pvesm add nfs proxmox-nfs --server {{ hostvars['nfs']['ansible_host'] }} --export /srv/proxmox-nfs --content images,backup
+      args:
+        executable: /bin/bash
