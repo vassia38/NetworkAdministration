@@ -8,19 +8,22 @@ all:
           ansible_ssh_private_key_file: ./ssh/id_ed25519
           ansible_python_interpreter: /usr/bin/python3
     proxmoxs:
+      children:
+        subordinates:
+          hosts:
+            proxmox2:
+              ansible_host: 192.168.38.155
+              ansible_user: root
+              ansible_ssh_private_key_file: ./ssh/id_ed25519
+              ansible_python_interpreter: /usr/bin/python3
+            proxmox3:
+              ansible_host: 192.168.38.154
+              ansible_user: root
+              ansible_ssh_private_key_file: ./ssh/id_ed25519
+              ansible_python_interpreter: /usr/bin/python3
       hosts:
         proxmox1:
-          ansible_host: 192.168.38.146
-          ansible_user: root
-          ansible_ssh_private_key_file: ./ssh/id_ed25519
-          ansible_python_interpreter: /usr/bin/python3
-        proxmox2:
-          ansible_host: 192.168.38.148
-          ansible_user: root
-          ansible_ssh_private_key_file: ./ssh/id_ed25519
-          ansible_python_interpreter: /usr/bin/python3
-        proxmox3:
-          ansible_host: 192.168.38.154
+          ansible_host: 192.168.38.156
           ansible_user: root
           ansible_ssh_private_key_file: ./ssh/id_ed25519
           ansible_python_interpreter: /usr/bin/python3

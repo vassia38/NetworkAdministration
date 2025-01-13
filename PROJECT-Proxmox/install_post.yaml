@@ -1,6 +1,6 @@
 ---
 - name: Install and Configure Proxmox VE
-  hosts: proxmox3    # Le groupe ou hôte sur lequel exécuter les tâches
+  hosts: proxmoxs    # Le groupe ou hôte sur lequel exécuter les tâches
   become: true       # Exécute les tâches avec des privilèges root
   gather_facts: yes 
   tasks:    

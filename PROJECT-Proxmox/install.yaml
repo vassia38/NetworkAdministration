@@ -1,11 +1,13 @@
 ---
 - name: Install and Configure Proxmox VE
-  hosts: proxmox3    # Le groupe ou hôte sur lequel exécuter les tâches
+  hosts: proxmoxs    # Le groupe ou hôte sur lequel exécuter les tâches
   become: true       # Exécute les tâches avec des privilèges root
   gather_facts: yes
   vars:
     domainname: ssi.edu
     dhcp_interface: "vmbr0"
+    out_interface: "ens33" 
+    priv_interface: "ens36"
     proxmox_interfaces: |
       source /etc/network/interfaces.d/*
 
@@ -13,19 +15,19 @@
       iface lo inet loopback
 
 
-      auto ens33
-      iface ens33 inet static
+      auto {{ out_interface }}
+      iface {{ out_interface }} inet static
               address {{ hostvars[inventory_hostname]['ansible_host'] }}
               netmask {{ ansible_default_ipv4.netmask }}
               gateway {{ ansible_default_ipv4.gateway }}
               dns-nameservers 8.8.8.8, 8.8.4.4
 
-      iface ens36 inet manual
+      iface {{ priv_interface }} inet manual
 
       auto vmbr0
       iface vmbr0 inet static
               address 192.168.3.1/24
-              bridge-ports ens36
+              bridge-ports {{ priv_interface }}
               bridge-stp off
               bridge-fd 0
   tasks:
@@ -120,7 +122,7 @@
 
     - name: Ajouter une règle iptables pour le NAT 
       ansible.builtin.command:
-        cmd: iptables -t nat -A POSTROUTING -o ens33 -s 192.168.3.0/24 -j MASQUERADE
+        cmd: iptables -t nat -A POSTROUTING -o {{ out_interface }} -s 192.168.3.0/24 -j MASQUERADE
 
     - name: Enregistrer les règles iptables (optionnel, selon le système)
       ansible.builtin.shell:
