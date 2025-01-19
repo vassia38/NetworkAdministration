@@ -1,0 +1,16 @@
+options {
+    directory "/var/cache/bind";
+
+    // Forwarders
+    forwarders {
+        8.8.8.8;  // Serveur DNS de Google
+        8.8.4.4;  // Autre serveur DNS de Google
+    };
+
+    // Autres options
+    allow-query { any; };
+    recursion yes;
+    forward only;  // Utiliser uniquement le forwarding
+};
+
+

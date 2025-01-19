@@ -1,0 +1,26 @@
+---
+- name: Copier l'application CodeIgniter
+  unarchive:
+    src: codeigniter_app.zip
+    dest: /var/www/html/
+    remote_src: no
+
+- name: Fixer les permissions
+  file:
+    path: /var/www/html/codeigniter
+    owner: www-data
+    group: www-data
+    recurse: yes
+
+- name: Pousser le fichier .env
+  template:
+    src: env.j2
+    dest: /var/www/html/codeigniter/.env
+    owner: www-data
+    group: www-data
+    mode: '0640'
+
+- name: Redémarrer Apache pour appliquer les changements
+  service:
+    name: apache2
+    state: restarted

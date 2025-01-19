@@ -1,0 +1,13 @@
+---
+- name: Déployer une application CodeIgniter 4 avec MySQL
+  hosts: webservers
+  become: true
+  roles:
+    - apache
+    - codeigniter
+
+- name: Configurer MySQL
+  hosts: dbservers
+  become: true
+  roles:
+    - mysql
