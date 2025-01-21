@@ -1,2 +1,0 @@
-[all]
-server1 ansible_user=root ansible_connection=lxc ansible_host=server_tp5

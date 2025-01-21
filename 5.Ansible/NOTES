@@ -1,3 +1,0 @@
-using "become: yes" in a playbook expects 'sudo' to be installed
-alpine uses 'apk' and not 'apt'
-make sure sshd service are enabled on alpine

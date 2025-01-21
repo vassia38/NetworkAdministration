@@ -1,13 +1,13 @@
 ---
-- name: Deploy the Laravel app
-  hosts: all
-  vars:
-    M2_SSI: SSI
-    SNAME: ServerTP5
-  remote_user: root
+- name: Deploy CodeIgniter4 webapp
+  hosts: webservers
+  become: true
   roles:
-    - utils
-    - php
-    - laravel
+    - apache
+    - codeigniter
+
+- name: Config MySQL database
+  hosts: dbservers
+  become: true
+  roles:
     - mysql
-    - nginx
