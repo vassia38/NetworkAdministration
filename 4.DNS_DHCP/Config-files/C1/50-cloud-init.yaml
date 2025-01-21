@@ -3,8 +3,8 @@ network:
   ethernets:
     eth1:
       addresses:
-        - 192.168.10.2/26  # Adresse IP pour C1 sur net1
-      gateway4: 192.168.10.1  # Passerelle (gateway) pour net1
+        - 192.168.10.2/26 
+      gateway4: 192.168.10.1  
       nameservers:
         addresses:
           - 192.168.10.3

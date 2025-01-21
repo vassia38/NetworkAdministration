@@ -5,7 +5,7 @@ network:
       dhcp4: true
     eth1:
       addresses:
-        - 192.168.10.1/26   # Adresse IP sur net1
+        - 192.168.10.1/26   # net1
       nameservers:
         addresses:
           - 192.168.10.3
@@ -14,14 +14,14 @@ network:
           - ssi.edu        
     eth2:
       addresses:
-        - 192.168.10.117/30 # Adresse IP sur netR1-R3
+        - 192.168.10.117/30 # netR1-R3
       routes:
-        - to: 192.168.10.64/27     # Route vers le réseau 2
+        - to: 192.168.10.64/27     # net2
           via: 192.168.10.118
     eth3:
       addresses:
-        - 192.168.10.113/30 # Adresse IP sur netR2-R3
+        - 192.168.10.113/30 # netR2-R3
       routes:
-        - to: 192.168.10.96/28     # Route vers netR2-R3
+        - to: 192.168.10.96/28     # netR2-R3
           via: 192.168.10.114
 
